@@ -1,0 +1,11 @@
+# Binaries
+aegis-engine
+aegis-ctl
+*.exe
+
+# Database
+aegis.db
+aegis.db-journal
+
+# Go dependencies
+vendor/
