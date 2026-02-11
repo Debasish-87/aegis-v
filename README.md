@@ -619,9 +619,3 @@ export DOCKER_API_VERSION=1.44
 Email: `22btics06@suiit.ac.in`
 
 ---
-
-# ⭐ Support
-
-If you like this project, give it a ⭐ on GitHub — it motivates future upgrades!
-
-```
