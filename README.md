@@ -67,7 +67,7 @@ Provides:
 ```
 
                      ┌──────────────────────────────────────┐
-                     │            AEGIS-CTL (CLI)            │
+                     │            AEGIS-CTL (CLI)           │
                      │--------------------------------------│
                      │  • Deploy YAML workloads             │
                      │  • Status (containers + incidents)   │
@@ -120,11 +120,11 @@ Provides:
                                          ▼
 
                      ┌──────────────────────────────────────┐
-                     │            AEGIS-VIZ  (:8081)          │
+                     │            AEGIS-VIZ  (:8081)        │
                      │--------------------------------------│
-                     │  • Live Security Feed                 │
-                     │  • Threat count + charts              │
-                     │  • Source-wise attack visualization   │
+                     │  • Live Security Feed                │
+                     │  • Threat count + charts             │
+                     │  • Source-wise attack visualization  │
                      └──────────────────────────────────────┘
 
 
