@@ -3,15 +3,13 @@
 *.db-wal
 *.db-shm
 
-# Compiled binaries
-aegis-ctl
-cmd/aegis-engine/aegis-engine
-cmd/aegis-viz/aegis-viz
+# Compiled binaries (ONLY exact paths)
+./aegis-ctl
+./cmd/aegis-engine/aegis-engine
+./cmd/aegis-viz/aegis-viz
 
 # eBPF generated object
 internal/security/*.o
 
 # extra dump
 fullcode.txt
-
-
