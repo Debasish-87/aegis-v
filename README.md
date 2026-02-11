@@ -340,16 +340,6 @@ aegis-v/
 
 ```
 
----
-
-
-
----
-
-Agar tu chahe toh main tumhare README me **API Endpoints Table** bhi add kar dunga (POST /deploy, GET /status, GET /alerts etc.) aur ek **proper “Security Model”** section bhi.
-
----
-
 # ⚙️ Requirements
 
 ### OS
