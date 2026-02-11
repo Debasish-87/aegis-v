@@ -66,10 +66,9 @@ Provides:
 
 ## High-Level Diagram
 
-```
-
+```text
                      ┌──────────────────────────────────────┐
-                     │            AEGIS-CTL (CLI)           │
+                     │            AEGIS-CTL (CLI)            │
                      │--------------------------------------│
                      │  • Deploy YAML workloads             │
                      │  • Status (containers + incidents)   │
@@ -80,40 +79,40 @@ Provides:
                                          ▼
 
 ┌───────────────────────────────────────────────────────────────────────────────┐
-│                            AEGIS-ENGINE  (API :8080)                          │
+│                            AEGIS-ENGINE  (API :8080)                           │
 │-------------------------------------------------------------------------------│
 │                                                                               │
 │  ┌──────────────────────┐     ┌──────────────────────┐     ┌────────────────┐ │
-│  │  Gatekeeper          │     │  Orchestrator        │     │  AI Advisor    │ │
-│  │  (Supply Chain)      │     │  (Docker Runtime)    │     │ (Verdict/AIOps)│ │
+│  │  Gatekeeper          │     │  Orchestrator         │     │  AI Advisor     │ │
+│  │  (Supply Chain)      │     │  (Docker Runtime)     │     │ (Verdict/AIOps) │ │
 │  │----------------------│     │----------------------│     │----------------│ │
-│  │ • blocks latest tag  │     │ • pull image         │     │ • threat detect│ │
-│  │ • registry whitelist │     │ • create container   │     │ • crashloop    │ │
-│  │ • keyword scan       │     │ • set CPU/MEM limits │     │ • quarantine   │ │
+│  │ • blocks latest tag  │     │ • pull image         │     │ • threat detect │ │
+│  │ • registry whitelist │     │ • create container   │     │ • crashloop     │ │
+│  │ • keyword scan       │     │ • set CPU/MEM limits │     │ • quarantine    │ │
 │  └───────────┬──────────┘     └───────────┬──────────┘     └───────┬────────┘ │
 │              │                            │                        │          │
 │              ▼                            ▼                        ▼          │
-│       Deployment Allowed            Container Running       AI Insight Stored │
+│       Deployment Allowed            Container Running        AI Insight Stored  │
 │                                                                               │
 │-------------------------------------------------------------------------------│
-│                         Runtime Security (Kernel Layer)                       │
+│                         Runtime Security (Kernel Layer)                        │
 │                                                                               │
 │  ┌─────────────────────────────────────────────────────────────────────────┐  │
-│  │ Guardian + eBPF Monitor                                                 │  │
+│  │ Guardian + eBPF Monitor                                                  │  │
 │  │-------------------------------------------------------------------------│  │
-│  │ • tracepoint: sys_enter_execve                                          │  │
-│  │ • captures: pid, ppid, uid, mount namespace, comm                       │  │
-│  │ • resolves namespace → docker container name                            │  │
-│  │ • noise filtering (system + AEGIS safe processes)                       │  │
+│  │ • tracepoint: sys_enter_execve                                           │  │
+│  │ • captures: pid, ppid, uid, mount namespace, comm                        │  │
+│  │ • resolves namespace → docker container name                             │  │
+│  │ • noise filtering (system + AEGIS safe processes)                        │  │
 │  │ • AI verdict tagging                                                    │  │
-│  │ • optional defense: kill suspicious process safely                      │  │
+│  │ • optional defense: kill suspicious process safely                       │  │
 │  └─────────────────────────────────────────────────────────────────────────┘  │
 │                                                                               │
 │                                   │                                           │
 │                                   ▼                                           │
-│                          SQLite Database (aegis.db)                           │
+│                          SQLite Database (aegis.db)                            │
 │-------------------------------------------------------------------------------│
-│ • deployments table  → service state + resources + AI insight                 │
+│ • deployments table  → service state + resources + AI insight                  │
 │ • detections table   → runtime security incidents                             │
 │ • security_alerts    → policy violations                                      │
 └───────────────────────────────────────────────────────────────────────────────┘
@@ -122,34 +121,28 @@ Provides:
                                          ▼
 
                      ┌──────────────────────────────────────┐
-                     │            AEGIS-VIZ  (:8081)        │
+                     │            AEGIS-VIZ  (:8081)          │
                      │--------------------------------------│
-                     │  • Live Security Feed                │
-                     │  • Threat count + charts             │
-                     │  • Source-wise attack visualization  │
+                     │  • Live Security Feed                 │
+                     │  • Threat count + charts              │
+                     │  • Source-wise attack visualization   │
                      └──────────────────────────────────────┘
-
-
-```
-
----
-
-
+````
 
 ---
 
 ## 🔁 System Flow (Step-by-Step)
 
 ### ✅ Deploy Flow
+
 1. User runs: `aegis-ctl <yaml>`
 2. CLI sends JSON to: `POST /deploy`
 3. Engine runs **Gatekeeper checks**
 4. If safe → Orchestrator provisions Docker container
 5. Engine stores deployment into DB
 
----
-
 ### 🚨 Runtime Attack Flow
+
 1. Any process executes inside host/container
 2. eBPF detects `execve`
 3. Guardian filters noise + resolves container
@@ -158,22 +151,18 @@ Provides:
 6. Dashboard updates automatically
 7. (Optional) Defender kills suspicious PID
 
+### ♻️ Self-Healing Flow
+
+1. Reconciliation loop checks DB deployments
+2. Cross-checks with live docker state
+3. If service down:
+
+   * AI Advisor correlates recent alerts
+   * Either restarts service OR quarantines it
+
 ---
 
-### ♻️ Self-Healing Flow
-1. Reconciliation loop checks DB deployments
-2. Cross-checks with live Docker status
-3. If service down:
-   - AI Advisor correlates recent alerts
-   - Either restarts service OR quarantines it
-
-
-
 # 📂 Project File Structure
-
-```
-
-## 📂 Project Structure (Advanced + Explained)
 
 ```text
 aegis-v/
@@ -311,56 +300,38 @@ aegis-v/
 │       └── Folder reserved for workload YAML storage
 │
 ├── app.yaml
-│   └── Sample workload YAML (deployment format)
-│
 ├── cluster.yaml
-│   └── Cluster configuration (optional extension)
-│
 ├── test-nginx.yaml
-│   └── Example secure nginx deployment (tagged image)
-│
 ├── test-app.yaml
-│   └── Example custom app deployment
 │
 ├── go.mod
 ├── go.sum
-│   └── Go module dependencies
 │
 ├── .gitignore
-│   └── Prevent committing:
-│       - *.db
-│       - binaries
-│       - build artifacts
-│
 └── README.md
-    └── Full documentation:
-        - architecture
-        - commands
-        - security model
-        - troubleshooting
-
-
 ```
+
 ---
 
 # ⚙️ Requirements
 
 ### OS
+
 ✅ Linux (mandatory for eBPF)
 
 ### Tools
-- Go 1.20+
-- Docker installed + running
-- Root permissions (for eBPF monitoring)
+
+* Go 1.20+
+* Docker installed + running
+* Root permissions (for eBPF monitoring)
 
 ---
 
 # 🧠 Docker API Fix (If Docker errors)
-If docker API negotiation fails:
 
 ```bash
 export DOCKER_API_VERSION=1.44
-````
+```
 
 ---
 
@@ -500,9 +471,7 @@ docker exec -it <container-id> bash
 
 ## 1) eBPF Runtime Exec Monitoring
 
-* Hooks into:
-
-  * `tracepoint/syscalls/sys_enter_execve`
+* Hooks into: `tracepoint/syscalls/sys_enter_execve`
 * Captures:
 
   * PID, PPID, UID
@@ -620,4 +589,4 @@ export DOCKER_API_VERSION=1.44
 **Debasish-87**
 Email: `22btics06@suiit.ac.in`
 
----
+`````
