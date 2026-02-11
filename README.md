@@ -1,161 +1,452 @@
-# aegis-v
+# 🛡️ AEGIS-V  
+### AI-Driven Container Security + Self-Healing Orchestrator (Go + eBPF + Docker + SQLite)
 
+AEGIS-V is a security-first container control plane that combines:
 
-<!-- docker version fail then run -
+✅ **Kernel-level runtime monitoring (eBPF)**  
+✅ **AI-based threat verdicting**  
+✅ **Active defense (auto-kill suspicious processes)**  
+✅ **Self-healing orchestration (auto restart / quarantine)**  
+✅ **Supply-chain policy enforcement (Gatekeeper)**  
+✅ **CLI + Web Dashboard for observability**
 
+---
+
+## ⭐ Why AEGIS-V?
+Modern container environments face:
+- Reverse shells
+- Crypto miners
+- Unauthorized exec inside containers
+- Supply chain poisoning (malicious images)
+- Crash loops and infra drift
+- Blind spots in runtime behavior
+
+AEGIS-V solves this by acting like a **mini Kubernetes + Falco + AI SOC** — but lightweight and Go-native.
+
+---
+
+# 🔥 Core Components
+
+## 1) 🛡️ AEGIS-ENGINE (Control Plane)
+Runs at: `http://localhost:8080`
+
+Responsibilities:
+- Secure deployments (`/deploy`)
+- Live status (`/status`)
+- Alerts (`/alerts`)
+- Runtime monitoring (eBPF)
+- Self-healing reconciliation loop
+- SQLite persistence (`aegis.db`)
+
+---
+
+## 2) 🎛️ AEGIS-CTL (CLI)
+A terminal tool to:
+- Deploy services via YAML
+- Check status + incidents
+- View alerts
+- Delete services
+
+---
+
+## 3) 📊 AEGIS-VIZ (Dashboard)
+Runs at: `http://localhost:8081`
+
+Provides:
+- Live security feed
+- Threat count
+- Chart of threats per service
+- Terminal audit vault
+
+---
+
+# 🧠 AEGIS-V Architecture
+
+## High-Level Diagram
+
+```
+
+```
+            ┌──────────────────────────────┐
+            │        AEGIS-CTL (CLI)        │
+            │  deploy / status / alerts     │
+            └──────────────┬───────────────┘
+                           │ HTTP
+                           ▼
+```
+
+┌──────────────────────────────────────────────────────────────┐
+│                     AEGIS-ENGINE (8080)                      │
+│  ┌───────────────┐  ┌───────────────────┐  ┌───────────────┐ │
+│  │ Gatekeeper     │  │ Orchestrator       │  │ AI Advisor     │ │
+│  │ (policy)       │  │ (Docker deploy)    │  │ (verdict)      │ │
+│  └──────┬────────┘  └─────────┬─────────┘  └──────┬────────┘ │
+│         │                     │                   │          │
+│         ▼                     ▼                   ▼          │
+│   Blocks unsafe images    Runs containers     Detects crash   │
+│   (latest/untrusted)      with limits         loops/threats   │
+│                                                                  │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ Guardian + eBPF Monitor                                    │ │
+│  │ - Hooks sys_enter_execve                                   │ │
+│  │ - Captures command, pid, uid, namespace                    │ │
+│  │ - Resolves container name                                  │ │
+│  │ - Logs + optionally kills process                          │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                         │
+│                         ▼
+│                    SQLite (aegis.db)
+└──────────────────────────────────────────────────────────────┘
+│
+▼
+┌──────────────────────────────┐
+│     AEGIS-VIZ (8081)          │
+│  Live Feed + Chart + Logs     │
+└──────────────────────────────┘
+
+```
+
+---
+
+# 📂 Project File Structure
+
+```
+
+aegis-v/
+├── api/
+│   └── handlers.go               # API handlers (status, provision)
+│
+├── cmd/
+│   ├── aegis-engine/
+│   │   └── main.go               # Engine entrypoint (API + loops + eBPF)
+│   │
+│   ├── aegis-ctl/
+│   │   └── main.go               # CLI entrypoint
+│   │
+│   └── aegis-viz/
+│       ├── main.go               # Dashboard server
+│       └── static/
+│           └── index.html        # UI + ChartJS + Tailwind
+│
+├── internal/
+│   ├── ai/
+│   │   └── advisor.go            # AI advisor heuristics + crashloop detection
+│   │
+│   ├── guardian/
+│   │   ├── api.go                # Alerts API handler
+│   │   ├── defender.go           # Safe kill logic
+│   │   └── ebpf.go               # Log + resolve + save detections
+│   │
+│   ├── orchestrator/
+│   │   └── docker.go             # Docker provisioning + container status
+│   │
+│   ├── platform/
+│   │   └── db.go                 # SQLite init + schema + persistence
+│   │
+│   └── security/
+│       ├── gatekeeper.go         # Image policy enforcement
+│       ├── guardian.c            # eBPF program (execve tracepoint)
+│       ├── monitor.go            # eBPF loader + ringbuf reader
+│       ├── bpf_bpfel.go          # generated Go bindings
+│       └── bpf_bpfel.o           # generated object (optional)
+│
+├── scripts/
+│   └── db_check.go               # helper for DB checks
+│
+├── app.yaml                      # sample workload
+├── cluster.yaml                  # cluster config
+├── test-app.yaml                 # test deploy
+├── test-nginx.yaml               # test deploy
+│
+├── go.mod
+├── go.sum
+└── README.md
+
+````
+
+---
+
+# ⚙️ Requirements
+
+### OS
+✅ Linux (mandatory for eBPF)
+
+### Tools
+- Go 1.20+
+- Docker installed + running
+- Root permissions (for eBPF monitoring)
+
+---
+
+# 🧠 Docker API Fix (If Docker errors)
+If docker API negotiation fails:
+
+```bash
 export DOCKER_API_VERSION=1.44
-go run cmd/aegis-engine/main.go 
+````
 
+---
 
--->
+# 🚀 FULL RUN SEQUENCE (Recommended)
 
+Because AEGIS uses **Kernel-level monitoring**, the Engine must run with `sudo`.
 
+---
 
-<!-- 
-engine start command ->
+## 🧹 Step 1: Clean Start (Safe)
 
-go build -o aegis-engine main.go && sudo ./aegis-engine -->
+```bash
+sudo pkill -9 aegis-engine || true
+sudo pkill -9 aegis-viz || true
+sudo fuser -k 8080/tcp || true
+sudo fuser -k 8081/tcp || true
+```
 
+---
 
-\
+## 🛡️ Step 2: Start AEGIS-ENGINE (Terminal 1)
 
+```bash
+cd ~/Pictures/aegis-v/cmd/aegis-engine
+go build -o aegis-engine .
+sudo ./aegis-engine
+```
 
+Engine endpoints:
 
+* `http://localhost:8080/health`
+* `http://localhost:8080/status`
+* `http://localhost:8080/alerts`
+* `http://localhost:8080/api/logs`
 
+---
 
+## 📊 Step 3: Start AEGIS-VIZ (Terminal 2)
 
+```bash
+cd ~/Pictures/aegis-v/cmd/aegis-viz
+go build -o aegis-viz .
+./aegis-viz
+```
 
+Open dashboard:
+👉 `http://localhost:8081`
 
+---
 
+## 🎛️ Step 4: Build AEGIS-CTL (Terminal 3)
 
+```bash
+cd ~/Pictures/aegis-v/cmd/aegis-ctl
+go build -o aegis-ctl .
+```
 
+---
 
+# 🎮 AEGIS-CTL Commands (ALL)
 
+### Help
 
+```bash
+./aegis-ctl help
+```
 
+### Status (Services + Incidents)
 
+```bash
+./aegis-ctl status
+```
 
-package guardian
+### Alerts
 
-import (
-	"database/sql"
-	"fmt"
-	"log"
-	"strconv"
-	"strings"
-	"time"
+```bash
+./aegis-ctl alerts
+```
 
-	"github.com/Debasish-87/aegis-v/internal/ai"
-	"github.com/Debasish-87/aegis-v/internal/orchestrator"
-)
+### Delete Service
 
-var globalDB *sql.DB
+```bash
+./aegis-ctl delete <service-name>
+```
 
-// AI Advisor instance initialize
-var advisor = ai.NewAdvisor("aegis-brain-v1")
+Example:
 
-// InitGuardian database ko initialize karta hai
-func InitGuardian(db *sql.DB) {
-	globalDB = db
-}
+```bash
+./aegis-ctl delete nginx-service
+```
 
-// ProcessAndLog terminal pe dikhayega aur DB mein save karega
-func ProcessAndLog(cmd string, pid int, risk string, source string, identity string) {
-	// 1. IMPROVED NOISE FILTER (Self-Protection Logic)
-	// Humne lowercase aur Contains use kiya hai taaki path kuch bhi ho, Aegis components safe rahein
-	cmdLow := strings.ToLower(cmd)
+---
 
-	if cmdLow == "runc" ||
-		cmdLow == "containerd-shim" ||
-		cmdLow == "runc:[2:init]" ||
-		cmdLow == "docker-proxy" ||
-		cmdLow == "healthcheck" ||
-		strings.Contains(cmdLow, "aegis-viz") || // Safe list viz
-		strings.Contains(cmdLow, "aegis-ctl") || // Safe list ctl
-		strings.Contains(cmdLow, "aegis-engine") || // Safe list engine
-		cmdLow == "go" {
-		return
-	}
+# 📦 Deploy Workloads (YAML)
 
-	// 2. Resolve "NS:ID" to "Container Name"
-	resolvedSource := source
-	if strings.HasPrefix(source, "NS:") {
-		nsStr := strings.TrimPrefix(source, "NS:")
-		nsID, err := strconv.ParseUint(nsStr, 10, 32)
-		if err == nil {
-			name := orchestrator.GetContainerNameByNamespace(uint32(nsID))
-			if name != "" {
-				resolvedSource = name
-			} else if nsID == 4026531832 || nsID == 4026531840 {
-				resolvedSource = "HOST / SYSTEM"
-			}
-		}
-	}
+### Deploy Nginx
 
-	// 3. GET AI VERDICT
-	aiVerdict := advisor.GetVerdict(cmd, identity, resolvedSource)
+```bash
+cd ~/Pictures/aegis-v
+./cmd/aegis-ctl/aegis-ctl test-nginx.yaml
+```
 
-	// 4. Terminal Output
-	fmt.Printf("\n[EBPF ALERT] 🚨 Unauthorized Exec Detected!\n")
-	fmt.Printf("   ├─ Command:    %s\n", cmd)
-	fmt.Printf("   ├─ AI Verdict: %s\n", aiVerdict)
-	fmt.Printf("   ├─ Source:     %s\n", resolvedSource)
-	fmt.Printf("   ├─ Identity:   %s\n", identity)
-	fmt.Printf("   └─ PID:        %d\n", pid)
-	fmt.Println("--------------------------------------------")
+### Deploy App
 
-	// 5. Database Save Logic
-	if globalDB != nil {
-		query := `INSERT INTO detections (command, risk, source, identity, pid, timestamp) 
-                  VALUES (?, ?, ?, ?, ?, ?)`
-		_, err := globalDB.Exec(query, cmd, aiVerdict, resolvedSource, identity, pid, time.Now().Format(time.RFC3339Nano))
-		if err != nil {
-			log.Printf("[DB ERROR] Failed to save detection: %v", err)
-		}
-	}
-}
+```bash
+./cmd/aegis-ctl/aegis-ctl test-app.yaml
+```
 
+---
 
+# 🧪 Attack Simulation / Testing
 
+## ✅ Normal commands (safe)
 
+```bash
+ls
+pwd
+echo "AEGIS-V running"
+```
 
+## 🚨 Suspicious host command (should alert)
 
+```bash
+sudo cat /etc/shadow
+```
 
+## 🚨 Container exec attempt
 
+```bash
+docker ps
+docker exec -it <container-id> bash
+```
 
+---
 
+# 🛡️ Security Features
 
+## 1) eBPF Runtime Exec Monitoring
 
+* Hooks into:
 
+  * `tracepoint/syscalls/sys_enter_execve`
+* Captures:
 
+  * PID, PPID, UID
+  * Mount namespace (container identity)
+  * command name
 
-🚀 Step 3: Clean Start Sequence (Ye Try Karo)
+## 2) Smart Noise Filtering
 
-Ek baar sab kuch saaf karke restart karte hain:
+AEGIS avoids logging:
 
-    Sab band karo:
-    Bash
+* systemd / dockerd / containerd
+* VS Code / gopls / apt
+* AEGIS internal processes
 
-    sudo pkill -9 aegis-engine
-    sudo pkill -9 aegis-viz
-    sudo fuser -k 8081/tcp
+## 3) AI Advisor Verdict
 
-    Engine ko Start karo (Terminal 1):
-    Bash
+Threat classification detects patterns like:
 
-    cd ~/Pictures/aegis-v/cmd/aegis-engine
-    sudo ./aegis-engine
+* `/etc/shadow` access
+* netcat reverse shell
+* wget/curl malware ingress
+* crypto miners
+* recon tools (nmap, tcpdump)
 
-    Viz ko Start karo (Terminal 2):
-    Bash
+## 4) Active Defense (Guardian Defender)
 
-    cd ~/Pictures/aegis-v/cmd/aegis-viz
-    ./aegis-viz
+* Suspicious processes can be terminated
+* Built-in safety:
 
-💡 Pro Tip:
+  * does not kill system PID ranges
+  * does not kill AEGIS components
+  * prevents engine suicide
+  * prevents killing engine child processes
 
-Aap baar-baar go run main.go status chala rahe ho. Agar aapko sirf audit dekhna hai, toh Terminal mein dekhne ke bajaye Browser mein dekho.
+## 5) Supply Chain Gatekeeper
 
-Browser mein jaakar http://localhost:8081 ko Refresh karo. Wo automatic update hota rahega, aapko baar-baar command chalane ki zaroorat nahi padegi.
+Blocks deployment if:
 
-Bhai, ek baar fuser chala kar dekho, dashboard turant wapas aa jayega! Kya browser mein page load ho raha hai?
+* image uses `latest`
+* no version tag
+* registry not whitelisted
+* keyword contains suspicious terms
+* malformed image name
+
+## 6) Self-Healing Reconciliation Loop
+
+Every ~15 seconds:
+
+* checks DB deployments
+* checks live docker state
+* if down:
+
+  * AI Advisor analyzes alerts
+  * either restart or quarantine
+
+---
+
+# 📈 Benefits / Why This Project is Powerful
+
+✅ **Real kernel monitoring (not just logs)**
+✅ **Detects runtime attacks inside containers**
+✅ **Works like a lightweight SOC for Docker**
+✅ **Auto-healing and quarantine logic**
+✅ **CLI + Dashboard gives full observability**
+✅ **Designed like production DevSecOps tooling**
+
+---
+
+# 💡 Use Cases
+
+* DevSecOps demonstration project
+* Mini container security platform
+* eBPF learning + runtime security research
+* AI-driven AIOps + incident correlation
+* Lightweight alternative for lab environments
+
+---
+
+# 🛠️ Troubleshooting
+
+## Port Already in Use
+
+```bash
+sudo fuser -k 8080/tcp
+sudo fuser -k 8081/tcp
+```
+
+## Docker API mismatch
+
+```bash
+export DOCKER_API_VERSION=1.44
+```
+
+## Dashboard not updating
+
+* Ensure Engine is running on `8080`
+* Ensure Viz is running on `8081`
+* Refresh browser: `Ctrl + Shift + R`
+
+---
+
+# 🗺️ Roadmap (Future Improvements)
+
+* Add authentication for API endpoints
+* Add Prometheus metrics
+* Add container network isolation response
+* Add real LLM integration (Ollama / OpenAI)
+* Add signed image verification (cosign)
+* Multi-node cluster support
+
+---
+
+# 👤 Author
+
+**Debasish-87**
+Email: `22btics06@suiit.ac.in`
+
+---
+
+# ⭐ Support
+
+If you like this project, give it a ⭐ on GitHub — it motivates future upgrades!
+
+```
