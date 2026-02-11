@@ -171,177 +171,172 @@ Provides:
 
 ```
 
-aegis-v/
-├── api/
-│   └── handlers.go               # API handlers (status, provision)
-│
-├── cmd/
-│   ├── aegis-engine/
-│   │   └── main.go               # Engine entrypoint (API + loops + eBPF)
-│   │
-│   ├── aegis-ctl/
-│   │   └── main.go               # CLI entrypoint
-│   │
-│   └── aegis-viz/
-│       ├── main.go               # Dashboard server
-│       └── static/
-│           └── index.html        # UI + ChartJS + Tailwind
-│
-├── internal/
-│   ├── ai/
-│   │   └── advisor.go            # AI advisor heuristics + crashloop detection
-│   │
-│   ├── guardian/
-│   │   ├── api.go                # Alerts API handler
-│   │   ├── defender.go           # Safe kill logic
-│   │   └── ebpf.go               # Log + resolve + save detections
-│   │
-│   ├── orchestrator/
-│   │   └── docker.go             # Docker provisioning + container status
-│   │
-│   ├── platform/
-│   │   └── db.go                 # SQLite init + schema + persistence
-│   │
-│   └── security/
-│       ├── gatekeeper.go         # Image policy enforcement
-│       ├── guardian.c            # eBPF program (execve tracepoint)
-│       ├── monitor.go            # eBPF loader + ringbuf reader
-│       ├── bpf_bpfel.go          # generated Go bindings
-│       └── bpf_bpfel.o           # generated object (optional)
-│
-├── scripts/
-│   └── db_check.go               # helper for DB checks
-│
-├── app.yaml                      # sample workload
-├── cluster.yaml                  # cluster config
-├── test-app.yaml                 # test deploy
-├── test-nginx.yaml               # test deploy
-│
-├── go.mod
-├── go.sum
-└── README.md
+## 📂 Project Structure (Advanced + Explained)
 
-````
-
-
-
-# 📂 Project File Structure (Detailed)
-
-```
-
+```text
 aegis-v/
 │
 ├── api/
 │   └── handlers.go
-│       └── API handlers (status + incidents for client tools)
+│       └── HTTP API handlers:
+│           - cluster status response
+│           - incidents aggregation
+│           - endpoints for aegis-ctl integration
 │
-├── cmd/
-│   ├── aegis-engine/
-│   │   └── main.go
-│   │       └── Control plane:
-│   │           - API server (:8080)
-│   │           - self-healing loop
-│   │           - deploy pipeline
-│   │           - eBPF monitor startup
-│   │           - DB init
+├── cmd/                                # Entry-points (3 executables)
 │   │
-│   ├── aegis-ctl/
+│   ├── aegis-engine/                   # 🛡️ Main Control Plane
 │   │   └── main.go
-│   │       └── CLI tool:
-│   │           - deploy YAML → JSON → /deploy
-│   │           - status → /status
-│   │           - alerts → /alerts
-│   │           - delete → /delete
+│   │       └── Engine responsibilities:
+│   │           - API Gateway (:8080)
+│   │           - /deploy, /status, /alerts, /delete
+│   │           - Self-healing reconciliation loop
+│   │           - Gatekeeper validation before deploy
+│   │           - Starts runtime eBPF monitor
+│   │           - DB init + persistence bootstrap
 │   │
-│   └── aegis-viz/
+│   ├── aegis-ctl/                      # 🎛️ CLI Tool
+│   │   └── main.go
+│   │       └── CLI capabilities:
+│   │           - Deploy YAML → JSON → POST /deploy
+│   │           - Cluster status → GET /status
+│   │           - Alerts → GET /alerts
+│   │           - Delete → DELETE /delete?name=
+│   │           - Pretty output (ANSI color UI)
+│   │
+│   └── aegis-viz/                      # 📊 Dashboard (Visualizer)
 │       ├── main.go
-│       │   └── Dashboard server (:8081)
-│       │       - reads detections from SQLite
-│       │       - serves static UI
+│       │   └── Dashboard server (:8081):
+│       │       - Reads detections from SQLite
+│       │       - Provides /api/incidents for frontend
+│       │       - Runs live terminal audit vault
 │       │
 │       └── static/
 │           └── index.html
-│               └── UI (Tailwind + Chart.js)
+│               └── Web UI:
+│                   - TailwindCSS styling
+│                   - Chart.js bar graph
+│                   - Live threat feed table
+│                   - Auto refresh polling
 │
-├── internal/
+├── internal/                           # Core logic (not importable externally)
+│   │
 │   ├── ai/
 │   │   └── advisor.go
-│   │       └── AI-style logic:
-│   │           - threat pattern detection
-│   │           - crashloop detection
-│   │           - remediation suggestions
+│   │       └── AI-style intelligence layer:
+│   │           - Threat pattern classification
+│   │           - CrashLoopBackOff detection
+│   │           - Severity mapping (LOW → CRITICAL)
+│   │           - Remediation + response decision
 │   │
 │   ├── guardian/
 │   │   ├── api.go
-│   │   │   └── DB → alerts API handler
+│   │   │   └── Alerts API handler:
+│   │   │       - Fetch detections from DB
+│   │   │       - JSON response for CLI / Engine
 │   │   │
-│   │   ├── defender.go
-│   │   │   └── Active defense:
-│   │   │       - safe kill logic
-│   │   │       - whitelist protection
+│   │   ├── ebpf.go
+│   │   │   └── Runtime incident pipeline:
+│   │   │       - Receives exec alerts from monitor
+│   │   │       - Resolves NS → container name
+│   │   │       - Noise filtering + enrichment
+│   │   │       - AI verdict tagging
+│   │   │       - Saves detections into SQLite
 │   │   │
-│   │   └── ebpf.go
-│   │       └── Runtime event pipeline:
-│   │           - resolves namespace → container
-│   │           - logs detections to DB
-│   │           - prints styled terminal alerts
+│   │   └── defender.go
+│   │       └── Active defense layer:
+│   │           - Safe SIGKILL logic
+│   │           - Protected process whitelist
+│   │           - Prevent engine self-kill
+│   │           - Prevent killing engine child lineage
 │   │
 │   ├── orchestrator/
 │   │   └── docker.go
-│   │       └── Docker runtime:
-│   │           - list containers
-│   │           - provision containers
-│   │           - stop/remove containers
-│   │           - namespace → container mapping
+│   │       └── Container orchestration engine:
+│   │           - Pull images
+│   │           - Create containers
+│   │           - Apply CPU/MEM limits
+│   │           - List containers (running + stopped)
+│   │           - Stop/remove containers
+│   │           - Namespace → Docker container mapping
 │   │
 │   ├── platform/
 │   │   └── db.go
-│   │       └── SQLite engine:
-│   │           - schema creation
-│   │           - WAL mode
-│   │           - detections + deployments persistence
+│   │       └── SQLite persistence layer:
+│   │           - schema creation (deployments/detections/security_alerts)
+│   │           - WAL mode for stability
+│   │           - migration support (columns)
+│   │           - helper DB write functions
 │   │
 │   └── security/
 │       ├── gatekeeper.go
-│       │   └── Supply chain policy:
-│       │       - block latest tag
-│       │       - whitelist registries
-│       │       - keyword scan
+│       │   └── Supply-chain policy enforcement:
+│       │       - blocks :latest or untagged images
+│       │       - registry allowlist
+│       │       - blacklisted keyword scan
+│       │       - regex validation (anti-injection)
 │       │
 │       ├── guardian.c
 │       │   └── eBPF C program:
-│       │       - execve tracepoint
-│       │       - ringbuf event output
+│       │       - tracepoint: sys_enter_execve
+│       │       - captures pid/ppid/uid/mnt_ns/comm
+│       │       - ring buffer output to userspace
+│       │       - aggressive kernel-side noise filtering
 │       │
 │       ├── monitor.go
-│       │   └── eBPF loader:
-│       │       - attaches tracepoint
-│       │       - reads ringbuf
-│       │       - filters noise
-│       │       - triggers guardian pipeline
+│       │   └── eBPF loader + event processor:
+│       │       - attaches kernel tracepoint
+│       │       - reads ringbuf events
+│       │       - deep whitelist + noise suppression
+│       │       - detects interactive shell attempts
+│       │       - sends final alert → guardian pipeline
 │       │
 │       ├── bpf_bpfel.go
-│       │   └── Generated Go bindings (bpf2go)
+│       │   └── Generated Go bindings (via bpf2go)
 │       │
 │       └── bpf_bpfel.o
-│           └── Generated eBPF object (optional to commit)
+│           └── Generated eBPF object
+│               (optional to commit; can be regenerated)
 │
 ├── scripts/
 │   └── db_check.go
-│       └── DB helper/testing script
+│       └── Developer helper:
+│           - validate DB schema
+│           - check stored incidents
 │
 ├── deployments/
-│   └── (optional) deployment yaml storage
+│   └── (optional)
+│       └── Folder reserved for workload YAML storage
 │
 ├── app.yaml
+│   └── Sample workload YAML (deployment format)
+│
 ├── cluster.yaml
+│   └── Cluster configuration (optional extension)
+│
 ├── test-nginx.yaml
+│   └── Example secure nginx deployment (tagged image)
+│
 ├── test-app.yaml
+│   └── Example custom app deployment
 │
 ├── go.mod
 ├── go.sum
-├── README.md
-└── .gitignore
+│   └── Go module dependencies
+│
+├── .gitignore
+│   └── Prevent committing:
+│       - *.db
+│       - binaries
+│       - build artifacts
+│
+└── README.md
+    └── Full documentation:
+        - architecture
+        - commands
+        - security model
+        - troubleshooting
+
 
 ```
 
