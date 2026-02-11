@@ -223,6 +223,136 @@ aegis-v/
 
 ````
 
+
+
+# 📂 Project File Structure (Detailed)
+
+```
+
+aegis-v/
+│
+├── api/
+│   └── handlers.go
+│       └── API handlers (status + incidents for client tools)
+│
+├── cmd/
+│   ├── aegis-engine/
+│   │   └── main.go
+│   │       └── Control plane:
+│   │           - API server (:8080)
+│   │           - self-healing loop
+│   │           - deploy pipeline
+│   │           - eBPF monitor startup
+│   │           - DB init
+│   │
+│   ├── aegis-ctl/
+│   │   └── main.go
+│   │       └── CLI tool:
+│   │           - deploy YAML → JSON → /deploy
+│   │           - status → /status
+│   │           - alerts → /alerts
+│   │           - delete → /delete
+│   │
+│   └── aegis-viz/
+│       ├── main.go
+│       │   └── Dashboard server (:8081)
+│       │       - reads detections from SQLite
+│       │       - serves static UI
+│       │
+│       └── static/
+│           └── index.html
+│               └── UI (Tailwind + Chart.js)
+│
+├── internal/
+│   ├── ai/
+│   │   └── advisor.go
+│   │       └── AI-style logic:
+│   │           - threat pattern detection
+│   │           - crashloop detection
+│   │           - remediation suggestions
+│   │
+│   ├── guardian/
+│   │   ├── api.go
+│   │   │   └── DB → alerts API handler
+│   │   │
+│   │   ├── defender.go
+│   │   │   └── Active defense:
+│   │   │       - safe kill logic
+│   │   │       - whitelist protection
+│   │   │
+│   │   └── ebpf.go
+│   │       └── Runtime event pipeline:
+│   │           - resolves namespace → container
+│   │           - logs detections to DB
+│   │           - prints styled terminal alerts
+│   │
+│   ├── orchestrator/
+│   │   └── docker.go
+│   │       └── Docker runtime:
+│   │           - list containers
+│   │           - provision containers
+│   │           - stop/remove containers
+│   │           - namespace → container mapping
+│   │
+│   ├── platform/
+│   │   └── db.go
+│   │       └── SQLite engine:
+│   │           - schema creation
+│   │           - WAL mode
+│   │           - detections + deployments persistence
+│   │
+│   └── security/
+│       ├── gatekeeper.go
+│       │   └── Supply chain policy:
+│       │       - block latest tag
+│       │       - whitelist registries
+│       │       - keyword scan
+│       │
+│       ├── guardian.c
+│       │   └── eBPF C program:
+│       │       - execve tracepoint
+│       │       - ringbuf event output
+│       │
+│       ├── monitor.go
+│       │   └── eBPF loader:
+│       │       - attaches tracepoint
+│       │       - reads ringbuf
+│       │       - filters noise
+│       │       - triggers guardian pipeline
+│       │
+│       ├── bpf_bpfel.go
+│       │   └── Generated Go bindings (bpf2go)
+│       │
+│       └── bpf_bpfel.o
+│           └── Generated eBPF object (optional to commit)
+│
+├── scripts/
+│   └── db_check.go
+│       └── DB helper/testing script
+│
+├── deployments/
+│   └── (optional) deployment yaml storage
+│
+├── app.yaml
+├── cluster.yaml
+├── test-nginx.yaml
+├── test-app.yaml
+│
+├── go.mod
+├── go.sum
+├── README.md
+└── .gitignore
+
+```
+
+---
+
+
+
+---
+
+Agar tu chahe toh main tumhare README me **API Endpoints Table** bhi add kar dunga (POST /deploy, GET /status, GET /alerts etc.) aur ek **proper “Security Model”** section bhi.
+
 ---
 
 # ⚙️ Requirements
