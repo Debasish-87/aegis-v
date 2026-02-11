@@ -5,16 +5,16 @@
 
 AEGIS-V is a security-first container control plane that combines:
 
-✅ **Kernel-level runtime monitoring (eBPF)**  
-✅ **AI-based threat verdicting**  
-✅ **Active defense (auto-kill suspicious processes)**  
-✅ **Self-healing orchestration (auto restart / quarantine)**  
-✅ **Supply-chain policy enforcement (Gatekeeper)**  
-✅ **CLI + Web Dashboard for observability**
+ **Kernel-level runtime monitoring (eBPF)**  
+ **AI-based threat verdicting**  
+ **Active defense (auto-kill suspicious processes)**  
+ **Self-healing orchestration (auto restart / quarantine)**  
+ **Supply-chain policy enforcement (Gatekeeper)**  
+ **CLI + Web Dashboard for observability**
 
 ---
 
-## ⭐ Why AEGIS-V?
+##  Why AEGIS-V?
 Modern container environments face:
 - Reverse shells
 - Crypto miners
@@ -27,9 +27,9 @@ AEGIS-V solves this by acting like a **mini Kubernetes + Falco + AI SOC** — bu
 
 ---
 
-# 🔥 Core Components
+#  Core Components
 
-## 1) 🛡️ AEGIS-ENGINE (Control Plane)
+## 1)  AEGIS-ENGINE (Control Plane)
 Runs at: `http://localhost:8080`
 
 Responsibilities:
@@ -42,7 +42,7 @@ Responsibilities:
 
 ---
 
-## 2) 🎛️ AEGIS-CTL (CLI)
+## 2)  AEGIS-CTL (CLI)
 A terminal tool to:
 - Deploy services via YAML
 - Check status + incidents
@@ -51,7 +51,7 @@ A terminal tool to:
 
 ---
 
-## 3) 📊 AEGIS-VIZ (Dashboard)
+## 3)  AEGIS-VIZ (Dashboard)
 Runs at: `http://localhost:8081`
 
 Provides:
@@ -62,13 +62,13 @@ Provides:
 
 ---
 
-# 🧠 AEGIS-V Architecture
+#  AEGIS-V Architecture
 
 ## High-Level Diagram
 
 ```text
                      ┌──────────────────────────────────────┐
-                     │            AEGIS-CTL (CLI)            │
+                     │            AEGIS-CTL (CLI)           │
                      │--------------------------------------│
                      │  • Deploy YAML workloads             │
                      │  • Status (containers + incidents)   │
@@ -79,40 +79,40 @@ Provides:
                                          ▼
 
 ┌───────────────────────────────────────────────────────────────────────────────┐
-│                            AEGIS-ENGINE  (API :8080)                           │
+│                            AEGIS-ENGINE  (API :8080)                          │
 │-------------------------------------------------------------------------------│
 │                                                                               │
 │  ┌──────────────────────┐     ┌──────────────────────┐     ┌────────────────┐ │
-│  │  Gatekeeper          │     │  Orchestrator         │     │  AI Advisor     │ │
-│  │  (Supply Chain)      │     │  (Docker Runtime)     │     │ (Verdict/AIOps) │ │
+│  │  Gatekeeper          │     │  Orchestrator        │     │  AI Advisor    │ │
+│  │  (Supply Chain)      │     │  (Docker Runtime)    │     │ (Verdict/AIOps)│ │
 │  │----------------------│     │----------------------│     │----------------│ │
-│  │ • blocks latest tag  │     │ • pull image         │     │ • threat detect │ │
-│  │ • registry whitelist │     │ • create container   │     │ • crashloop     │ │
-│  │ • keyword scan       │     │ • set CPU/MEM limits │     │ • quarantine    │ │
+│  │ • blocks latest tag  │     │ • pull image         │     │ • threat detect│ │
+│  │ • registry whitelist │     │ • create container   │     │ • crashloop    │ │
+│  │ • keyword scan       │     │ • set CPU/MEM limits │     │ • quarantine   │ │
 │  └───────────┬──────────┘     └───────────┬──────────┘     └───────┬────────┘ │
 │              │                            │                        │          │
 │              ▼                            ▼                        ▼          │
-│       Deployment Allowed            Container Running        AI Insight Stored  │
+│       Deployment Allowed            Container Running      AI Insight Stored  │
 │                                                                               │
 │-------------------------------------------------------------------------------│
-│                         Runtime Security (Kernel Layer)                        │
+│                         Runtime Security (Kernel Layer)                       │
 │                                                                               │
 │  ┌─────────────────────────────────────────────────────────────────────────┐  │
-│  │ Guardian + eBPF Monitor                                                  │  │
+│  │ Guardian + eBPF Monitor                                                 │  │
 │  │-------------------------------------------------------------------------│  │
-│  │ • tracepoint: sys_enter_execve                                           │  │
-│  │ • captures: pid, ppid, uid, mount namespace, comm                        │  │
-│  │ • resolves namespace → docker container name                             │  │
-│  │ • noise filtering (system + AEGIS safe processes)                        │  │
+│  │ • tracepoint: sys_enter_execve                                          │  │
+│  │ • captures: pid, ppid, uid, mount namespace, comm                       │  │
+│  │ • resolves namespace → docker container name                            │  │
+│  │ • noise filtering (system + AEGIS safe processes)                       │  │
 │  │ • AI verdict tagging                                                    │  │
-│  │ • optional defense: kill suspicious process safely                       │  │
+│  │ • optional defense: kill suspicious process safely                      │  │
 │  └─────────────────────────────────────────────────────────────────────────┘  │
 │                                                                               │
 │                                   │                                           │
 │                                   ▼                                           │
-│                          SQLite Database (aegis.db)                            │
+│                          SQLite Database (aegis.db)                           │
 │-------------------------------------------------------------------------------│
-│ • deployments table  → service state + resources + AI insight                  │
+│ • deployments table  → service state + resources + AI insight                 │
 │ • detections table   → runtime security incidents                             │
 │ • security_alerts    → policy violations                                      │
 └───────────────────────────────────────────────────────────────────────────────┘
@@ -131,9 +131,9 @@ Provides:
 
 ---
 
-## 🔁 System Flow (Step-by-Step)
+##  System Flow (Step-by-Step)
 
-### ✅ Deploy Flow
+###  Deploy Flow
 
 1. User runs: `aegis-ctl <yaml>`
 2. CLI sends JSON to: `POST /deploy`
@@ -141,7 +141,7 @@ Provides:
 4. If safe → Orchestrator provisions Docker container
 5. Engine stores deployment into DB
 
-### 🚨 Runtime Attack Flow
+###  Runtime Attack Flow
 
 1. Any process executes inside host/container
 2. eBPF detects `execve`
@@ -151,7 +151,7 @@ Provides:
 6. Dashboard updates automatically
 7. (Optional) Defender kills suspicious PID
 
-### ♻️ Self-Healing Flow
+###  Self-Healing Flow
 
 1. Reconciliation loop checks DB deployments
 2. Cross-checks with live docker state
@@ -176,7 +176,7 @@ aegis-v/
 │
 ├── cmd/                                # Entry-points (3 executables)
 │   │
-│   ├── aegis-engine/                   # 🛡️ Main Control Plane
+│   ├── aegis-engine/                   #  Main Control Plane
 │   │   └── main.go
 │   │       └── Engine responsibilities:
 │   │           - API Gateway (:8080)
@@ -186,7 +186,7 @@ aegis-v/
 │   │           - Starts runtime eBPF monitor
 │   │           - DB init + persistence bootstrap
 │   │
-│   ├── aegis-ctl/                      # 🎛️ CLI Tool
+│   ├── aegis-ctl/                      #  CLI Tool
 │   │   └── main.go
 │   │       └── CLI capabilities:
 │   │           - Deploy YAML → JSON → POST /deploy
@@ -195,7 +195,7 @@ aegis-v/
 │   │           - Delete → DELETE /delete?name=
 │   │           - Pretty output (ANSI color UI)
 │   │
-│   └── aegis-viz/                      # 📊 Dashboard (Visualizer)
+│   └── aegis-viz/                      #  Dashboard (Visualizer)
 │       ├── main.go
 │       │   └── Dashboard server (:8081):
 │       │       - Reads detections from SQLite
@@ -313,11 +313,11 @@ aegis-v/
 
 ---
 
-# ⚙️ Requirements
+#  Requirements
 
 ### OS
 
-✅ Linux (mandatory for eBPF)
+ Linux (mandatory for eBPF)
 
 ### Tools
 
@@ -327,7 +327,7 @@ aegis-v/
 
 ---
 
-# 🧠 Docker API Fix (If Docker errors)
+#  Docker API Fix (If Docker errors)
 
 ```bash
 export DOCKER_API_VERSION=1.44
@@ -335,13 +335,13 @@ export DOCKER_API_VERSION=1.44
 
 ---
 
-# 🚀 FULL RUN SEQUENCE (Recommended)
+#  FULL RUN SEQUENCE (Recommended)
 
 Because AEGIS uses **Kernel-level monitoring**, the Engine must run with `sudo`.
 
 ---
 
-## 🧹 Step 1: Clean Start (Safe)
+##  Step 1: Clean Start (Safe)
 
 ```bash
 sudo pkill -9 aegis-engine || true
@@ -352,7 +352,7 @@ sudo fuser -k 8081/tcp || true
 
 ---
 
-## 🛡️ Step 2: Start AEGIS-ENGINE (Terminal 1)
+##  Step 2: Start AEGIS-ENGINE (Terminal 1)
 
 ```bash
 cd ~/Pictures/aegis-v/cmd/aegis-engine
@@ -369,7 +369,7 @@ Engine endpoints:
 
 ---
 
-## 📊 Step 3: Start AEGIS-VIZ (Terminal 2)
+##  Step 3: Start AEGIS-VIZ (Terminal 2)
 
 ```bash
 cd ~/Pictures/aegis-v/cmd/aegis-viz
@@ -378,11 +378,11 @@ go build -o aegis-viz .
 ```
 
 Open dashboard:
-👉 `http://localhost:8081`
+ `http://localhost:8081`
 
 ---
 
-## 🎛️ Step 4: Build AEGIS-CTL (Terminal 3)
+##  Step 4: Build AEGIS-CTL (Terminal 3)
 
 ```bash
 cd ~/Pictures/aegis-v/cmd/aegis-ctl
@@ -391,7 +391,7 @@ go build -o aegis-ctl .
 
 ---
 
-# 🎮 AEGIS-CTL Commands (ALL)
+#  AEGIS-CTL Commands (ALL)
 
 ### Help
 
@@ -425,7 +425,7 @@ Example:
 
 ---
 
-# 📦 Deploy Workloads (YAML)
+#  Deploy Workloads (YAML)
 
 ### Deploy Nginx
 
@@ -442,9 +442,9 @@ cd ~/Pictures/aegis-v
 
 ---
 
-# 🧪 Attack Simulation / Testing
+#  Attack Simulation / Testing
 
-## ✅ Normal commands (safe)
+##  Normal commands (safe)
 
 ```bash
 ls
@@ -452,13 +452,13 @@ pwd
 echo "AEGIS-V running"
 ```
 
-## 🚨 Suspicious host command (should alert)
+##  Suspicious host command (should alert)
 
 ```bash
 sudo cat /etc/shadow
 ```
 
-## 🚨 Container exec attempt
+##  Container exec attempt
 
 ```bash
 docker ps
@@ -467,7 +467,7 @@ docker exec -it <container-id> bash
 
 ---
 
-# 🛡️ Security Features
+#  Security Features
 
 ## 1) eBPF Runtime Exec Monitoring
 
@@ -529,18 +529,18 @@ Every ~15 seconds:
 
 ---
 
-# 📈 Benefits / Why This Project is Powerful
+#  Benefits / Why This Project is Powerful
 
-✅ **Real kernel monitoring (not just logs)**
-✅ **Detects runtime attacks inside containers**
-✅ **Works like a lightweight SOC for Docker**
-✅ **Auto-healing and quarantine logic**
-✅ **CLI + Dashboard gives full observability**
-✅ **Designed like production DevSecOps tooling**
+ **Real kernel monitoring (not just logs)**
+ **Detects runtime attacks inside containers**
+ **Works like a lightweight SOC for Docker**
+ **Auto-healing and quarantine logic**
+ **CLI + Dashboard gives full observability**
+ **Designed like production DevSecOps tooling**
 
 ---
 
-# 💡 Use Cases
+#  Use Cases
 
 * DevSecOps demonstration project
 * Mini container security platform
@@ -550,7 +550,7 @@ Every ~15 seconds:
 
 ---
 
-# 🛠️ Troubleshooting
+#  Troubleshooting
 
 ## Port Already in Use
 
@@ -573,7 +573,7 @@ export DOCKER_API_VERSION=1.44
 
 ---
 
-# 🗺️ Roadmap (Future Improvements)
+#  Roadmap (Future Improvements)
 
 * Add authentication for API endpoints
 * Add Prometheus metrics
