@@ -313,6 +313,32 @@ aegis-v/
 
 ---
 
+#  Screenshots
+
+##  AEGIS-VIZ Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+##  Engine Running
+![Engine Running](screenshots/EngineRunning.png)
+
+##  Sensitive Data Logs Detection
+![Sensitive Logs](screenshots/sensitivityDataLogs.png)
+
+##  Isolated Attacker / Quarantine
+![Isolated Attacker](screenshots/IsolatedAttacker.png)
+
+##  Self-Healing Recovery
+![Self Healing](screenshots/SelfHealling.png)
+
+##  Whole System Status
+![Whole System Status](screenshots/WholeSystemStatus.png)
+
+##  CLI / Code View
+![CLI](screenshots/Code.png)
+
+
+---
+
 #  Requirements
 
 ### OS
