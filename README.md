@@ -1,4 +1,7 @@
 # 🛡️ AEGIS-V  
+
+## (Autonomous Enterprise Governance & Infrastructure Sentinel)
+
 ### AI-Driven Container Security + Self-Healing Orchestrator (Go + eBPF + Docker + SQLite)
 
 AEGIS-V is a security-first container control plane that combines:
