@@ -1,20 +1,9 @@
-# name: payment-service
-# version: v1.0.0
-# # "latest" hata kar koi version number dalo
-# image: ghcr.io/my-org/payments:v1.0.2 
-# replicas: 3
-# security_level: high
-
-
-# name: "payment-service"
-# version: "v1.0.0"
-# image: "nginx:latest"  # Isse change karo
-# replicas: 1
-# security_level: "high"
-
-
 name: "payment-service"
-version: "v1.0.0"
-image: "nginx:1.25.3"  # <--- Specifying a version to pass policy check
+version: "1.0.0"
+image: "nginx:1.25.3"
 replicas: 1
 security_level: "high"
+# Naya Section jo humne Phase 2 mein add kiya:
+resources:
+  cpu: 0.2        # Matlab 20% of a single CPU core
+  memory: 64      # Matlab sirf 64MB RAM limit

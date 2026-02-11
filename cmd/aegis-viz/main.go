@@ -2,43 +2,85 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
-	"strings" // Fixed: Added this import
+	"net/http"
+	"strings"
+	"time"
 
 	_ "github.com/glebarez/go-sqlite"
 )
 
-func main() {
-	// Connect to the DB file (Path from aegis-viz to engine)
-	db, err := sql.Open("sqlite", "../aegis-engine/aegis_audit.db")
-	if err != nil {
-		log.Fatal("[ERROR] Could not open database:", err)
-	}
-	defer db.Close()
+type Incident struct {
+	ID        int    `json:"id"`
+	Command   string `json:"command"`
+	Risk      string `json:"risk"`
+	Source    string `json:"source"`
+	Timestamp string `json:"timestamp"`
+}
 
-	// Query data from deployments table
-	rows, err := db.Query("SELECT id, service_name, image, replicas, timestamp FROM deployments")
+var db *sql.DB
+
+func main() {
+	var err error
+	// Database connection (aapka actual db file)
+	db, err = sql.Open("sqlite", "../aegis-engine/aegis.db")
 	if err != nil {
-		log.Fatal("[ERROR] Query failed:", err)
+		log.Fatal("[ERROR] Database connection failed:", err)
+	}
+
+	// 1. Background Task: Terminal mein Live Audit dikhane ke liye
+	go func() {
+		fmt.Println("\n" + strings.Repeat("=", 80))
+		fmt.Println("🛡️  AEGIS-V LIVE TERMINAL AUDIT VAULT")
+		fmt.Println(strings.Repeat("=", 80))
+		fmt.Printf("%-25s | %-15s | %-40s\n", "TIMESTAMP", "SOURCE", "AI VERDICT")
+		fmt.Println(strings.Repeat("-", 80))
+
+		lastID := 0
+		for {
+			// Sirf naye incidents fetch karo jo last check ke baad aaye hain
+			query := fmt.Sprintf("SELECT id, source, risk, timestamp FROM detections WHERE id > %d ORDER BY id ASC", lastID)
+			rows, err := db.Query(query)
+			if err == nil {
+				for rows.Next() {
+					var id int
+					var source, risk, ts string
+					rows.Scan(&id, &source, &risk, &ts)
+					
+					// Terminal par print karo
+					fmt.Printf("%-25s | %-15s | %-40s\n", ts[:19], source, risk)
+					lastID = id
+				}
+				rows.Close()
+			}
+			time.Sleep(2 * time.Second) // Har 2 sec mein check karega
+		}
+	}()
+
+	// 2. Web Routes
+	http.HandleFunc("/api/incidents", getIncidents)
+	http.Handle("/", http.FileServer(http.Dir("./static")))
+
+	fmt.Printf("\n[VIZ] 🌐 Web Dashboard live at http://localhost:8081\n\n")
+	log.Fatal(http.ListenAndServe(":8081", nil))
+}
+
+func getIncidents(w http.ResponseWriter, r *http.Request) {
+	rows, err := db.Query("SELECT id, command, risk, source, timestamp FROM detections ORDER BY id DESC LIMIT 20")
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
 	}
 	defer rows.Close()
 
-	fmt.Println("\n--- AEGIS-V AUDIT VAULT RECORDS ---")
-	// Table Header
-	fmt.Printf("%-3s | %-20s | %-40s | %-3s | %-20s\n", "ID", "Service", "Image", "Rep", "Timestamp")
-	fmt.Println(strings.Repeat("-", 100))
-
-	// Iterate through rows
+	var incidents []Incident
 	for rows.Next() {
-		var id, replicas int
-		var name, image, ts string
-		err := rows.Scan(&id, &name, &image, &replicas, &ts)
-		if err != nil {
-			log.Printf("[WARN] Row scan failed: %v", err)
-			continue
-		}
-		// Professional table row format
-		fmt.Printf("%-3d | %-20s | %-40s | %-3d | %-20s\n", id, name, image, replicas, ts)
+		var i Incident
+		rows.Scan(&i.ID, &i.Command, &i.Risk, &i.Source, &i.Timestamp)
+		incidents = append(incidents, i)
 	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(incidents)
 }

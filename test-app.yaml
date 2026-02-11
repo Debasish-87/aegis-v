@@ -1,0 +1,15 @@
+name: "postgres-node"
+version: "1.2.0"
+image: "postgres:15-alpine"
+replicas: 1
+security_level: "AUDIT"
+resources:
+  cpu: 0.4
+  memory: 512
+env:
+  - name: "POSTGRES_PASSWORD"
+    value: "aegis_secure_123"
+  - name: "POSTGRES_USER"
+    value: "aegis_admin"
+  - name: "POSTGRES_DB"
+    value: "aegis_db"

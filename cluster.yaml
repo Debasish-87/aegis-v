@@ -1,0 +1,18 @@
+services:
+  - name: "web-server"
+    version: "1.0.0"
+    image: "nginx:1.25.3-alpine"
+    security_level: "AUDIT"
+    resources:
+      cpu: 0.1
+      memory: 128
+  - name: "postgres-node"
+    version: "1.2.0"
+    image: "postgres:15-alpine"
+    security_level: "AUDIT"
+    resources:
+      cpu: 0.2
+      memory: 256
+    env:
+      - name: "POSTGRES_PASSWORD"
+        value: "aegis_secure_123"

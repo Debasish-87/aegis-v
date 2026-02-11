@@ -1,11 +1,15 @@
-# Binaries
-aegis-engine
+# DB files
+*.db
+*.db-wal
+*.db-shm
+
+# Compiled binaries
 aegis-ctl
-*.exe
+cmd/aegis-engine/aegis-engine
+cmd/aegis-viz/aegis-viz
 
-# Database
-aegis.db
-aegis.db-journal
+# eBPF generated object
+internal/security/*.o
 
-# Go dependencies
-vendor/
+# extra dump
+fullcode.txt

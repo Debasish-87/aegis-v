@@ -1,46 +1,10 @@
-# aegis-v
-
-
-<!-- docker version fail then run -
-
-export DOCKER_API_VERSION=1.44
-go run cmd/aegis-engine/main.go 
-
-
--->
-
-
-
-<!-- 
-engine start command ->
-
-go build -o aegis-engine main.go && sudo ./aegis-engine -->
-
-
-\
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 package guardian
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os" // Added for Getpid()
 	"strconv"
 	"strings"
 	"time"
@@ -61,18 +25,30 @@ func InitGuardian(db *sql.DB) {
 
 // ProcessAndLog terminal pe dikhayega aur DB mein save karega
 func ProcessAndLog(cmd string, pid int, risk string, source string, identity string) {
+
+	// 🔥 ADDED RECOVERY & SELF-PROTECTION LOGIC 🔥
+	if identity == "AEGIS_INTERNAL_RECOVERY" || pid == os.Getpid() {
+		return // Agar engine khud recovery kar raha hai, toh allow karo
+	}
+
 	// 1. IMPROVED NOISE FILTER (Self-Protection Logic)
-	// Humne lowercase aur Contains use kiya hai taaki path kuch bhi ho, Aegis components safe rahein
 	cmdLow := strings.ToLower(cmd)
+
+	if strings.Contains(cmdLow, "aegis") ||
+		strings.Contains(cmdLow, "go") ||
+		pid == os.Getpid() ||
+		identity == "AEGIS_INTERNAL_RECOVERY" {
+		return // Inhe turant ignore karo
+	}
 
 	if cmdLow == "runc" ||
 		cmdLow == "containerd-shim" ||
 		cmdLow == "runc:[2:init]" ||
 		cmdLow == "docker-proxy" ||
 		cmdLow == "healthcheck" ||
-		strings.Contains(cmdLow, "aegis-viz") || // Safe list viz
-		strings.Contains(cmdLow, "aegis-ctl") || // Safe list ctl
-		strings.Contains(cmdLow, "aegis-engine") || // Safe list engine
+		strings.Contains(cmdLow, "aegis-viz") ||
+		strings.Contains(cmdLow, "aegis-ctl") ||
+		strings.Contains(cmdLow, "aegis-engine") ||
 		cmdLow == "go" {
 		return
 	}
@@ -114,48 +90,3 @@ func ProcessAndLog(cmd string, pid int, risk string, source string, identity str
 		}
 	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-🚀 Step 3: Clean Start Sequence (Ye Try Karo)
-
-Ek baar sab kuch saaf karke restart karte hain:
-
-    Sab band karo:
-    Bash
-
-    sudo pkill -9 aegis-engine
-    sudo pkill -9 aegis-viz
-    sudo fuser -k 8081/tcp
-
-    Engine ko Start karo (Terminal 1):
-    Bash
-
-    cd ~/Pictures/aegis-v/cmd/aegis-engine
-    sudo ./aegis-engine
-
-    Viz ko Start karo (Terminal 2):
-    Bash
-
-    cd ~/Pictures/aegis-v/cmd/aegis-viz
-    ./aegis-viz
-
-💡 Pro Tip:
-
-Aap baar-baar go run main.go status chala rahe ho. Agar aapko sirf audit dekhna hai, toh Terminal mein dekhne ke bajaye Browser mein dekho.
-
-Browser mein jaakar http://localhost:8081 ko Refresh karo. Wo automatic update hota rahega, aapko baar-baar command chalane ki zaroorat nahi padegi.
-
-Bhai, ek baar fuser chala kar dekho, dashboard turant wapas aa jayega! Kya browser mein page load ho raha hai?

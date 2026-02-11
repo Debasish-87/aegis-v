@@ -1,0 +1,8 @@
+name: "web-server"
+version: "1.0.0"
+image: "nginx:1.25.3-alpine" # Specific version add kar diya
+replicas: 1
+security_level: "AUDIT"
+resources:
+  cpu: 0.1
+  memory: 128

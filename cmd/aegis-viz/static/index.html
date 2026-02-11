@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AEGIS-V | AI Security Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen">
+    <nav class="border-b border-slate-800 p-4 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-black tracking-tighter text-blue-500">🛡️ AEGIS-V <span class="text-slate-400 font-light italic">VISUALIZER</span></h1>
+            <div class="px-3 py-1 bg-green-500/10 border border-green-500/50 rounded-full text-green-500 text-xs animate-pulse">● SYSTEM LIVE</div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto p-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+                <h3 class="text-slate-500 text-sm font-medium uppercase mb-2">Threats Neutralized</h3>
+                <p id="totalCount" class="text-5xl font-bold text-white">0</p>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl md:col-span-2">
+                <canvas id="threatChart" height="80"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="p-4 border-b border-slate-800 bg-slate-800/50">
+                <h3 class="font-bold">Live Security Feed</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="text-xs text-slate-500 uppercase bg-slate-950">
+                        <tr>
+                            <th class="p-4">Timestamp</th>
+                            <th class="p-4">Origin / Source</th>
+                            <th class="p-4">Command</th>
+                            <th class="p-4 text-blue-400">AI Verdict</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+    <script>
+        let threatChart;
+
+        async function updateDashboard() {
+            const res = await fetch('/api/incidents');
+            const data = await res.json();
+            
+            document.getElementById('totalCount').innerText = data.length;
+            const body = document.getElementById('tableBody');
+            body.innerHTML = '';
+
+            // Chart Data Taiyar karna (Source wise count)
+            const counts = {};
+            data.forEach(inc => {
+                counts[inc.source] = (counts[inc.source] || 0) + 1;
+                
+                // Table update logic
+                body.innerHTML += `
+                    <tr class="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
+                        <td class="p-4 text-xs font-mono text-slate-500">${inc.timestamp.split('.')[0]}</td>
+                        <td class="p-4 font-bold text-slate-300">${inc.source}</td>
+                        <td class="p-4"><span class="bg-red-500/10 text-red-500 px-2 py-1 rounded font-mono text-sm border border-red-500/20">${inc.command}</span></td>
+                        <td class="p-4 text-sm font-medium text-blue-400 italic">${inc.risk}</td>
+                    </tr>`;
+            });
+
+            updateChart(counts);
+        }
+
+        function updateChart(counts) {
+            const ctx = document.getElementById('threatChart').getContext('2d');
+            const labels = Object.keys(counts);
+            const values = Object.values(counts);
+
+            if (threatChart) {
+                threatChart.data.labels = labels;
+                threatChart.data.datasets[0].data = values;
+                threatChart.update();
+            } else {
+                threatChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Threats per Service',
+                            data: values,
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: { y: { beginAtZero: true, grid: { color: '#1e293b' } } }
+                    }
+                });
+            }
+        }
+
+        setInterval(updateDashboard, 3000);
+        updateDashboard();
+    </script>
+</body>
+</html>
