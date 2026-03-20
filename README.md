@@ -4,7 +4,7 @@
 
 ### AEGIS-V monitors process execution at the kernel level, detects suspicious activity using rule-based classification, and can terminate malicious processes while maintaining system safety.
 
-### AI-Driven Container Security + Self-Healing Orchestrator (Go + eBPF + Docker + SQLite)
+AI-Driven Container Security + Self-Healing Orchestrator (Go + eBPF + Docker + SQLite)
 
 AEGIS-V is a security-first container control plane that combines:
 
