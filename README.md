@@ -1,5 +1,8 @@
-# 🛡️ AEGIS-V  
-## (Autonomous Enterprise Governance & Infrastructure Sentinel)
+# 🛡️ AEGIS-V
+
+## eBPF-based container runtime security system with active defense and lightweight orchestration.
+
+### AEGIS-V monitors process execution at the kernel level, detects suspicious activity using rule-based classification, and can terminate malicious processes while maintaining system safety.
 
 ### AI-Driven Container Security + Self-Healing Orchestrator (Go + eBPF + Docker + SQLite)
 
