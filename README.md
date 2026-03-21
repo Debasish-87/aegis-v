@@ -154,7 +154,7 @@ Advisor checks recent detections for this container
                   │  Deploy · Status · Alerts · Delete  │
                   └──────────────────┬──────────────────┘
                                      │ HTTP
-                                                             ▼
+                                     ▼
 
 ┌────────────────────────────────────────────────────────────────────────────┐
 │                          AEGIS-ENGINE  (:8080)                             │
@@ -183,7 +183,7 @@ Advisor checks recent detections for this container
 │           deployments · detections · security_alerts                       │
 └────────────────────────────────────────────────────────────────────────────┘
                                      │
-                                                             ▼
+                                     ▼
 
                   ┌─────────────────────────────────────┐
                   │           AEGIS-VIZ  (:8081)        │
