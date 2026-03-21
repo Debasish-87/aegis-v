@@ -14,7 +14,7 @@ Deploy → Enforce → Monitor → Respond → Recover
 
 Most runtime security tools are observation layers — they sit beside your infrastructure, detect events, and alert. Deployment, recovery, and response remain someone else's job.
 
-AEGIS-V integrates all of that into one system:
+AEGIS-V is an experimental system that integrates deployment, runtime monitoring, and response into a single control loop:
 
 | Capability | AEGIS-V | Typical Security Monitor |
 |---|---|---|
@@ -28,6 +28,24 @@ AEGIS-V integrates all of that into one system:
 > For Kubernetes-native runtime detection, see [KubeRTSec](https://github.com/Debasish-87/kubertsec) — a separate project that runs as a DaemonSet across a cluster. AEGIS-V is a single-node system that owns the full container lifecycle.
 
 ---
+## 🎯 Why This Matters
+
+In containerized environments, security is often split across multiple layers:
+
+- CI/CD pipelines validate images
+- Runtime tools detect suspicious behavior
+- Orchestrators manage deployment and recovery
+
+These layers are typically disconnected, creating gaps between detection, response, and recovery.
+
+AEGIS-V explores a unified approach where:
+
+- insecure workloads are blocked before deployment
+- runtime behavior is continuously monitored
+- security decisions directly influence recovery actions
+
+This reduces the gap between detection and enforcement, and demonstrates how security can be embedded directly into the container lifecycle.
+---
 
 ## ⚙️ Core Components
 
@@ -38,7 +56,7 @@ Runs the full control loop in a single binary:
 - **Gatekeeper** — validates workload specs before any container is provisioned
 - **Orchestrator** — pulls images, creates containers, applies CPU/memory limits
 - **eBPF Monitor** — attaches to `sys_enter_execve`; captures process executions across all containers
-- **Rule-Based Advisor** — classifies threats and informs recovery decisions
+- **Rule-Based Detection Engine** — classifies threats and informs recovery decisions
 - **Reconciliation Loop** — every ~15 seconds, compares desired state (DB) against actual state (Docker) and acts
 - **SQLite persistence** (`aegis.db`) — stores deployments, detections, and security alerts
 
@@ -395,7 +413,7 @@ export DOCKER_API_VERSION=1.44
 - **Docker-native** — not a Kubernetes controller (see [KubeRTSec](https://github.com/Debasish-87/kubertsec) for that)
 - **Rule-based detection** — deterministic heuristics, not machine learning
 - **Experimental system** — built for learning and research, not production deployment
-
+- Automated responses (e.g., process termination) are conservative and designed for safety, not aggressive enforcement.
 ---
 
 ## 🧭 Roadmap
