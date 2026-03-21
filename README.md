@@ -1,314 +1,315 @@
 # 🛡️ AEGIS-V
 
-## eBPF-based container runtime security system with active defense and lightweight orchestration.
-
-### AEGIS-V monitors process execution at the kernel level, detects suspicious activity using rule-based classification, and can terminate malicious processes while maintaining system safety.
-
-AEGIS-V is a security-first container control plane that combines:
-
- **Kernel-level runtime monitoring (eBPF)**  
- **Rule-based threat classification using syscall patterns and heuristics**  
- **Active defense (auto-kill suspicious processes)**  
- **Self-healing orchestration (auto restart / quarantine)**  
- **Supply-chain policy enforcement (Gatekeeper)**  
- **CLI + Web Dashboard for observability**
+> **A security-first container control plane** — deploys workloads, enforces supply-chain policy, monitors runtime behavior at the kernel level, and automatically heals or quarantines containers. Built for Docker on a single node.
 
 ---
 
-##  Why AEGIS-V?
-Modern container environments face:
-- Reverse shells
-- Crypto miners
-- Unauthorized exec inside containers
-- Supply chain poisoning (malicious images)
-- Crash loops and infra drift
-- Blind spots in runtime behavior
+## 🧭 How AEGIS-V Is Different
 
-AEGIS-V solves this by acting like a **mini Kubernetes + Falco + AI SOC** — but lightweight and Go-native.
+Most runtime security tools sit *beside* your infrastructure — they observe and alert, but they don't control anything. You still need a separate orchestrator to deploy, manage, and recover containers.
 
----
+**AEGIS-V collapses security and orchestration into a single control loop:**
 
-#  Core Components
+```
+Deploy → Enforce → Monitor → Respond → Recover
+```
 
-## 1)  AEGIS-ENGINE (Control Plane)
-Runs at: `http://localhost:8080`
+It validates workloads *before* they start, watches them at the kernel level *while* they run, and autonomously heals or quarantines them *when* something goes wrong — all in one system, no Kubernetes required.
 
-Responsibilities:
-- Secure deployments (`/deploy`)
-- Live status (`/status`)
-- Alerts (`/alerts`)
-- Runtime monitoring (eBPF)
-- Self-healing reconciliation loop
-- SQLite persistence (`aegis.db`)
+| Capability | AEGIS-V | Typical Security Monitor |
+|---|---|---|
+| Deploys containers | ✅ Yes | ❌ No |
+| Supply-chain policy at deploy time | ✅ Yes | ❌ No |
+| eBPF runtime monitoring | ✅ Yes | ✅ Yes |
+| Active process termination | ✅ Yes | Sometimes |
+| Self-healing / quarantine | ✅ Yes | ❌ No |
+| Requires Kubernetes | ❌ No — Docker only | Usually yes |
+
+> For Kubernetes-native runtime security, see [KubeRTSec](https://github.com/Debasish-87/kubertsec) — a separate project that runs as a DaemonSet and focuses on detection and alerting across a cluster. AEGIS-V takes a different approach: it *owns* the container lifecycle from deploy through recovery, and integrates security decisions into every step.
 
 ---
 
-## 2)  AEGIS-CTL (CLI)
-A terminal tool to:
-- Deploy services via YAML
-- Check status + incidents
-- View alerts
-- Delete services
+## 🔍 What AEGIS-V Does
+
+### Before a container starts — Gatekeeper
+
+Every workload passes through a supply-chain policy check before it is provisioned:
+
+- Blocks untagged or `:latest` images
+- Enforces a registry allowlist
+- Scans image names for blacklisted keywords
+- Rejects malformed or injection-risk image references
+
+Nothing gets deployed unless it passes. No exceptions.
+
+### While a container runs — eBPF Monitor
+
+AEGIS-V attaches a tracepoint to `sys_enter_execve` at the kernel level:
+
+- Captures PID, PPID, UID, mount namespace, and command name for every process execution
+- Resolves mount namespaces to Docker container names
+- Filters known-safe processes at both kernel and userspace levels
+- Classifies threats using rule-based pattern matching
+- Optionally terminates suspicious processes using a safe, whitelist-guarded kill path
+
+### When something goes wrong — Reconciliation Loop
+
+Every ~15 seconds, AEGIS-V compares what *should* be running (DB desired state) against what *is* running (live Docker state):
+
+- Benign crash → restart
+- Security incident → quarantine, prevent restart
+- All decisions logged and visible in the dashboard
 
 ---
 
-## 3)  AEGIS-VIZ (Dashboard)
-Runs at: `http://localhost:8081`
+## ⚙️ Core Components
 
-Provides:
-- Live security feed
-- Threat count
-- Chart of threats per service
-- Terminal audit vault
+### AEGIS-ENGINE — Control Plane (`localhost:8080`)
 
----
+The single binary that runs everything:
 
-#  AEGIS-V Architecture
+- **Gatekeeper** — supply-chain enforcement before any container starts
+- **Orchestrator** — provisions Docker containers with CPU/memory limits
+- **eBPF Monitor** — kernel-level process execution tracing
+- **Rule-Based Advisor** — threat classification and severity assignment
+- **Reconciliation Loop** — desired-state enforcement and security-aware recovery
+- **SQLite persistence** (`aegis.db`) — deployments, detections, security alerts
 
-## High-Level Diagram
+Endpoints: `/deploy` · `/status` · `/alerts` · `/delete` · `/health` · `/api/logs`
 
-```text
-                     ┌──────────────────────────────────────┐
-                     │            AEGIS-CTL (CLI)           │
-                     │--------------------------------------│
-                     │  • Deploy YAML workloads             │
-                     │  • Status (containers + incidents)   │
-                     │  • Alerts (detections from DB)       │
-                     │  • Delete services                   │
-                     └───────────────────┬──────────────────┘
-                                         │ HTTP API Calls
-                                         ▼
+### AEGIS-CTL — CLI
 
-┌───────────────────────────────────────────────────────────────────────────────┐
-│                            AEGIS-ENGINE  (API :8080)                          │
-│-------------------------------------------------------------------------------│
-│                                                                               │
-│  ┌──────────────────────┐     ┌──────────────────────┐     ┌────────────────┐ │
-│  │  Gatekeeper          │     │  Orchestrator        │     │  AI Advisor    │ │
-│  │  (Supply Chain)      │     │  (Docker Runtime)    │     │ (Verdict/AIOps)│ │
-│  │----------------------│     │----------------------│     │----------------│ │
-│  │ • blocks latest tag  │     │ • pull image         │     │ • threat detect│ │
-│  │ • registry whitelist │     │ • create container   │     │ • crashloop    │ │
-│  │ • keyword scan       │     │ • set CPU/MEM limits │     │ • quarantine   │ │
-│  └───────────┬──────────┘     └───────────┬──────────┘     └───────┬────────┘ │
-│              │                            │                        │          │
-│              ▼                            ▼                        ▼          │
-│       Deployment Allowed            Container Running      AI Insight Stored  │
-│                                                                               │
-│-------------------------------------------------------------------------------│
-│                         Runtime Security (Kernel Layer)                       │
-│                                                                               │
-│  ┌─────────────────────────────────────────────────────────────────────────┐  │
-│  │ Guardian + eBPF Monitor                                                 │  │
-│  │-------------------------------------------------------------------------│  │
-│  │ • tracepoint: sys_enter_execve                                          │  │
-│  │ • captures: pid, ppid, uid, mount namespace, comm                       │  │
-│  │ • resolves namespace → docker container name                            │  │
-│  │ • noise filtering (system + AEGIS safe processes)                       │  │
-│  │ • AI verdict tagging                                                    │  │
-│  │ • optional defense: kill suspicious process safely                      │  │
-│  └─────────────────────────────────────────────────────────────────────────┘  │
-│                                                                               │
-│                                   │                                           │
-│                                   ▼                                           │
-│                          SQLite Database (aegis.db)                           │
-│-------------------------------------------------------------------------------│
-│ • deployments table  → service state + resources + AI insight                 │
-│ • detections table   → runtime security incidents                             │
-│ • security_alerts    → policy violations                                      │
-└───────────────────────────────────────────────────────────────────────────────┘
-                                         │
-                                         │ DB Read (Incidents)
-                                         ▼
+```bash
+./aegis-ctl <workload.yaml>         # Deploy a workload
+./aegis-ctl status                  # Running services + active incidents
+./aegis-ctl alerts                  # Detection history
+./aegis-ctl delete <service-name>   # Remove a workload
+./aegis-ctl help
+```
 
-                     ┌──────────────────────────────────────┐
-                     │            AEGIS-VIZ  (:8081)        │
-                     │--------------------------------------│
-                     │  • Live Security Feed                │
-                     │  • Threat count + charts             │
-                     │  • Source-wise attack visualization  │
-                     └──────────────────────────────────────┘
-````
+### AEGIS-VIZ — Dashboard (`localhost:8081`)
+
+- Live security event stream (auto-refresh)
+- Threat count and bar chart
+- Source-wise attack visualization
+- Real-time audit feed
 
 ---
 
-##  System Flow (Step-by-Step)
+## 🔁 System Flows
 
-###  Deploy Flow
+### Deploy Flow
 
-1. User runs: `aegis-ctl <yaml>`
-2. CLI sends JSON to: `POST /deploy`
-3. Engine runs **Gatekeeper checks**
-4. If safe → Orchestrator provisions Docker container
-5. Engine stores deployment into DB
+```
+aegis-ctl <yaml>
+      │
+      ▼
+POST /deploy
+      │
+      ▼
+Gatekeeper policy check
+  (registry · tag · keywords · format)
+      │
+   Passed?
+  ┌───┴───┐
+ YES      NO → rejected with reason
+  │
+  ▼
+Orchestrator provisions container
+(image pull · CPU/MEM limits · start)
+      │
+      ▼
+State written to SQLite
+```
 
-###  Runtime Attack Flow
+### Runtime Detection Flow
 
-1. Any process executes inside host/container
-2. eBPF detects `execve`
-3. Guardian filters noise + resolves container
-4. AI Advisor generates verdict (HIGH/CRITICAL/etc.)
-5. Event saved into SQLite detections
-6. Dashboard updates automatically
-7. (Optional) Defender kills suspicious PID
+```
+Process executes inside container
+      │
+      ▼
+eBPF captures execve
+(pid · ppid · uid · mount_ns · comm)
+      │
+      ▼
+Kernel-side noise filter
+(drops systemd · dockerd · AEGIS-own)
+      │
+      ▼
+Userspace: NS → container name resolved
+      │
+      ▼
+Rule-based Advisor classifies threat
+(LOW / MEDIUM / HIGH / CRITICAL)
+      │
+      ▼
+Detection stored in SQLite → Dashboard updated
+      │
+(If HIGH/CRITICAL) Defender safely kills PID
+  • whitelist check
+  • parent-chain check (won't kill engine lineage)
+  • system PID range check
+```
 
-###  Self-Healing Flow
+### Self-Healing Flow
 
-1. Reconciliation loop checks DB deployments
-2. Cross-checks with live docker state
-3. If service down:
-
-   * AI Advisor correlates recent alerts
-   * Either restarts service OR quarantines it
+```
+Reconciliation loop (every ~15s)
+      │
+      ▼
+DB desired state ↔ live Docker state
+      │
+  Drift found?
+  ┌────┴────┐
+ YES        NO → continue
+  │
+  ▼
+Advisor correlates recent detections
+      │
+  Safe to restart?
+  ┌────┴─────────┐
+ YES             NO
+  │               │
+ Restart       Quarantine
+(normal crash) (security incident)
+```
 
 ---
 
-# 📂 Project File Structure
+## 🧠 Architecture
 
-```text
+```
+                  ┌─────────────────────────────────────┐
+                  │           AEGIS-CTL (CLI)           │
+                  │  Deploy · Status · Alerts · Delete  │
+                  └──────────────────┬──────────────────┘
+                                     │ HTTP
+                                     ▼
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                          AEGIS-ENGINE  (:8080)                             │
+│                                                                            │
+│  ┌─────────────────────┐  ┌─────────────────────┐  ┌────────────────────┐  │
+│  │     Gatekeeper      │  │    Orchestrator     │  │  Rule-Based        │  │
+│  │  (Supply Chain)     │  │  (Docker Runtime)   │  │  Advisor           │  │
+│  │  blocks :latest     │  │  pull image         │  │  threat classify   │  │
+│  │  registry allow     │  │  create container   │  │  severity mapping  │  │
+│  │  keyword scan       │  │  CPU/MEM limits     │  │  recovery decision │  │
+│  └──────────┬──────────┘  └──────────┬──────────┘  └────────┬───────────┘  │
+│             └────────────────────────┴──────────────────────┘              │
+│                                                                            │
+│──────────────────── Runtime Security (Kernel Layer) ───────────────────────│
+│                                                                            │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │  Guardian + eBPF Monitor                                             │  │
+│  │  tracepoint: sys_enter_execve                                        │  │
+│  │  captures: pid · ppid · uid · mount_ns · comm                        │  │
+│  │  resolves: namespace → container name                                │  │
+│  │  filters:  system procs + AEGIS internals                            │  │
+│  │  defense:  safe SIGKILL (whitelist + parent-chain guarded)           │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                            │
+│                       SQLite  (aegis.db)                                   │
+│           deployments · detections · security_alerts                       │
+└────────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+
+                  ┌─────────────────────────────────────┐
+                  │           AEGIS-VIZ  (:8081)        │
+                  │  Live Feed · Threat Charts · Audit  │
+                  └─────────────────────────────────────┘
+```
+
+---
+
+## 🔒 Security Capabilities
+
+### Supply-Chain Gatekeeper
+Policy enforced at deploy time — untagged images, unrecognized registries, suspicious keywords, and malformed references are blocked before a container is ever created.
+
+### eBPF Exec Monitoring
+Hooks `tracepoint/syscalls/sys_enter_execve`. Every process execution across all containers is captured at the kernel level with zero application instrumentation.
+
+### Smart Noise Filtering
+Known-safe processes suppressed at kernel and userspace — systemd, dockerd, containerd, Go toolchain, VS Code internals, and all AEGIS-own processes — so only real signals surface.
+
+### Rule-Based Threat Classification
+Detects patterns including:
+- `/etc/shadow` and sensitive file access
+- netcat / bash reverse shells
+- wget / curl malware ingress
+- crypto miner signatures
+- recon tools (nmap, tcpdump, lsof)
+
+Severity: `LOW` / `MEDIUM` / `HIGH` / `CRITICAL`
+
+### Safe Active Defense
+Defender sends SIGKILL with the following safeguards always active:
+- Skips system PID ranges
+- Skips AEGIS-engine and its child process lineage
+- Respects a named process whitelist
+
+### Security-Aware Self-Healing
+Reconciliation loop uses recent detection history to decide between restart (benign crash) and quarantine (confirmed security incident). Not just crash recovery — security-informed recovery.
+
+---
+
+## 🧠 Key Design Decisions
+
+| Decision | Rationale |
+|---|---|
+| Orchestration + security in one system | Eliminates the gap between "what should run" and "what is being watched" |
+| Gatekeeper at deploy time | Prevents bad workloads from ever starting — cheaper than killing a running process |
+| eBPF over log parsing | Real-time kernel visibility, no app changes, minimal overhead |
+| Rule-based classification | Deterministic, explainable — auditable and predictable behavior |
+| Security-informed reconciliation | Crash recovery decisions account for whether a security incident was involved |
+| Docker-first, no Kubernetes | Self-contained and runnable on a single Linux machine |
+| SQLite persistence | Zero external dependencies; WAL mode handles concurrent reads/writes |
+
+---
+
+## 📂 Project Structure
+
+```
 aegis-v/
 │
-├── api/
-│   └── handlers.go
-│       └── HTTP API handlers:
-│           - cluster status response
-│           - incidents aggregation
-│           - endpoints for aegis-ctl integration
-│
-├── cmd/                                # Entry-points (3 executables)
-│   │
-│   ├── aegis-engine/                   #  Main Control Plane
+├── cmd/
+│   ├── aegis-engine/       # Control plane — API, gatekeeper, orchestration, eBPF, reconciliation
 │   │   └── main.go
-│   │       └── Engine responsibilities:
-│   │           - API Gateway (:8080)
-│   │           - /deploy, /status, /alerts, /delete
-│   │           - Self-healing reconciliation loop
-│   │           - Gatekeeper validation before deploy
-│   │           - Starts runtime eBPF monitor
-│   │           - DB init + persistence bootstrap
-│   │
-│   ├── aegis-ctl/                      #  CLI Tool
+│   ├── aegis-ctl/          # CLI — deploy, status, alerts, delete
 │   │   └── main.go
-│   │       └── CLI capabilities:
-│   │           - Deploy YAML → JSON → POST /deploy
-│   │           - Cluster status → GET /status
-│   │           - Alerts → GET /alerts
-│   │           - Delete → DELETE /delete?name=
-│   │           - Pretty output (ANSI color UI)
-│   │
-│   └── aegis-viz/                      #  Dashboard (Visualizer)
+│   └── aegis-viz/          # Dashboard — live feed, threat charts
 │       ├── main.go
-│       │   └── Dashboard server (:8081):
-│       │       - Reads detections from SQLite
-│       │       - Provides /api/incidents for frontend
-│       │       - Runs live terminal audit vault
-│       │
-│       └── static/
-│           └── index.html
-│               └── Web UI:
-│                   - TailwindCSS styling
-│                   - Chart.js bar graph
-│                   - Live threat feed table
-│                   - Auto refresh polling
+│       └── static/index.html
 │
-├── internal/                           # Core logic (not importable externally)
-│   │
+├── internal/
 │   ├── ai/
-│   │   └── advisor.go
-│   │       └── AI-style intelligence layer:
-│   │           - Threat pattern classification
-│   │           - CrashLoopBackOff detection
-│   │           - Severity mapping (LOW → CRITICAL)
-│   │           - Remediation + response decision
-│   │
+│   │   └── advisor.go      # Rule-based threat classification + severity + recovery decisions
 │   ├── guardian/
-│   │   ├── api.go
-│   │   │   └── Alerts API handler:
-│   │   │       - Fetch detections from DB
-│   │   │       - JSON response for CLI / Engine
-│   │   │
-│   │   ├── ebpf.go
-│   │   │   └── Runtime incident pipeline:
-│   │   │       - Receives exec alerts from monitor
-│   │   │       - Resolves NS → container name
-│   │   │       - Noise filtering + enrichment
-│   │   │       - AI verdict tagging
-│   │   │       - Saves detections into SQLite
-│   │   │
-│   │   └── defender.go
-│   │       └── Active defense layer:
-│   │           - Safe SIGKILL logic
-│   │           - Protected process whitelist
-│   │           - Prevent engine self-kill
-│   │           - Prevent killing engine child lineage
-│   │
+│   │   ├── ebpf.go         # Alert pipeline: NS resolve, noise filter, DB write
+│   │   ├── api.go          # Alerts API handler
+│   │   └── defender.go     # Safe SIGKILL with whitelist + parent-chain protection
 │   ├── orchestrator/
-│   │   └── docker.go
-│   │       └── Container orchestration engine:
-│   │           - Pull images
-│   │           - Create containers
-│   │           - Apply CPU/MEM limits
-│   │           - List containers (running + stopped)
-│   │           - Stop/remove containers
-│   │           - Namespace → Docker container mapping
-│   │
+│   │   └── docker.go       # Container lifecycle + namespace → name mapping
 │   ├── platform/
-│   │   └── db.go
-│   │       └── SQLite persistence layer:
-│   │           - schema creation (deployments/detections/security_alerts)
-│   │           - WAL mode for stability
-│   │           - migration support (columns)
-│   │           - helper DB write functions
-│   │
+│   │   └── db.go           # SQLite schema, WAL mode, migration helpers
 │   └── security/
-│       ├── gatekeeper.go
-│       │   └── Supply-chain policy enforcement:
-│       │       - blocks :latest or untagged images
-│       │       - registry allowlist
-│       │       - blacklisted keyword scan
-│       │       - regex validation (anti-injection)
-│       │
-│       ├── guardian.c
-│       │   └── eBPF C program:
-│       │       - tracepoint: sys_enter_execve
-│       │       - captures pid/ppid/uid/mnt_ns/comm
-│       │       - ring buffer output to userspace
-│       │       - aggressive kernel-side noise filtering
-│       │
-│       ├── monitor.go
-│       │   └── eBPF loader + event processor:
-│       │       - attaches kernel tracepoint
-│       │       - reads ringbuf events
-│       │       - deep whitelist + noise suppression
-│       │       - detects interactive shell attempts
-│       │       - sends final alert → guardian pipeline
-│       │
-│       ├── bpf_bpfel.go
-│       │   └── Generated Go bindings (via bpf2go)
-│       │
-│       └── bpf_bpfel.o
-│           └── Generated eBPF object
-│               (optional to commit; can be regenerated)
+│       ├── gatekeeper.go   # Supply-chain policy enforcement
+│       ├── guardian.c      # eBPF C program — sys_enter_execve tracepoint
+│       ├── monitor.go      # eBPF loader, ringbuf reader, whitelist suppression
+│       ├── bpf_bpfel.go    # Generated Go bindings (bpf2go)
+│       └── bpf_bpfel.o     # Compiled eBPF object
+│
+├── api/
+│   └── handlers.go         # HTTP handlers — status aggregation, incidents
 │
 ├── scripts/
-│   └── db_check.go
-│       └── Developer helper:
-│           - validate DB schema
-│           - check stored incidents
+│   └── db_check.go         # Dev helper — schema validation, incident inspection
 │
-├── deployments/
-│   └── (optional)
-│       └── Folder reserved for workload YAML storage
-│
-├── app.yaml
-├── cluster.yaml
-├── test-nginx.yaml
-├── test-app.yaml
-│
-├── go.mod
-├── go.sum
-│
-├── .gitignore
+├── deployments/            # Workload YAML files
+├── app.yaml · cluster.yaml · test-nginx.yaml · test-app.yaml
+├── go.mod · go.sum
 └── README.md
 ```
 
@@ -337,38 +338,20 @@ aegis-v/
 ##  CLI / Code View
 ![CLI](screenshots/Code.png)
 
+---
+
+## ⚙️ Requirements
+
+- **OS:** Linux (mandatory — eBPF requires kernel support)
+- **Go:** 1.20+
+- **Docker:** installed and running
+- **Permissions:** root (required for eBPF tracepoint attachment)
 
 ---
 
-#  Requirements
+## 🚀 Running AEGIS-V
 
-### OS
-
- Linux (mandatory for eBPF)
-
-### Tools
-
-* Go 1.20+
-* Docker installed + running
-* Root permissions (for eBPF monitoring)
-
----
-
-#  Docker API Fix (If Docker errors)
-
-```bash
-export DOCKER_API_VERSION=1.44
-```
-
----
-
-#  FULL RUN SEQUENCE (Recommended)
-
-Because AEGIS uses **Kernel-level monitoring**, the Engine must run with `sudo`.
-
----
-
-##  Step 1: Clean Start (Safe)
+### Step 1 — Clean port state
 
 ```bash
 sudo pkill -9 aegis-engine || true
@@ -377,9 +360,7 @@ sudo fuser -k 8080/tcp || true
 sudo fuser -k 8081/tcp || true
 ```
 
----
-
-##  Step 2: Start AEGIS-ENGINE (Terminal 1)
+### Step 2 — Start Engine (Terminal 1)
 
 ```bash
 cd ~/Pictures/aegis-v/cmd/aegis-engine
@@ -387,231 +368,90 @@ go build -o aegis-engine .
 sudo ./aegis-engine
 ```
 
-Engine endpoints:
-
-* `http://localhost:8080/health`
-* `http://localhost:8080/status`
-* `http://localhost:8080/alerts`
-* `http://localhost:8080/api/logs`
-
----
-
-##  Step 3: Start AEGIS-VIZ (Terminal 2)
+### Step 3 — Start Dashboard (Terminal 2)
 
 ```bash
 cd ~/Pictures/aegis-v/cmd/aegis-viz
 go build -o aegis-viz .
 ./aegis-viz
+# Open http://localhost:8081
 ```
 
-Open dashboard:
- `http://localhost:8081`
-
----
-
-##  Step 4: Build AEGIS-CTL (Terminal 3)
+### Step 4 — Build CLI (Terminal 3)
 
 ```bash
 cd ~/Pictures/aegis-v/cmd/aegis-ctl
 go build -o aegis-ctl .
 ```
 
----
-
-#  AEGIS-CTL Commands (ALL)
-
-### Help
+**Deploy examples:**
 
 ```bash
-./aegis-ctl help
-```
-
-### Status (Services + Incidents)
-
-```bash
-./aegis-ctl status
-```
-
-### Alerts
-
-```bash
-./aegis-ctl alerts
-```
-
-### Delete Service
-
-```bash
-./aegis-ctl delete <service-name>
-```
-
-Example:
-
-```bash
-./aegis-ctl delete nginx-service
-```
-
----
-
-#  Deploy Workloads (YAML)
-
-### Deploy Nginx
-
-```bash
-cd ~/Pictures/aegis-v
 ./cmd/aegis-ctl/aegis-ctl test-nginx.yaml
-```
-
-### Deploy App
-
-```bash
 ./cmd/aegis-ctl/aegis-ctl test-app.yaml
 ```
 
 ---
 
-#  Attack Simulation / Testing
-
-##  Normal commands (safe)
+## 🧪 Attack Simulation
 
 ```bash
-ls
-pwd
-echo "AEGIS-V running"
-```
+# Safe — no alert
+ls && pwd && echo "AEGIS-V running"
 
-##  Suspicious host command (should alert)
-
-```bash
+# Privileged file access — should alert HIGH/CRITICAL
 sudo cat /etc/shadow
-```
 
-##  Container exec attempt
-
-```bash
-docker ps
+# Container exec attempt — should alert
 docker exec -it <container-id> bash
 ```
 
 ---
 
-#  Security Features
+## 🔧 Troubleshooting
 
-## 1) eBPF Runtime Exec Monitoring
-
-* Hooks into: `tracepoint/syscalls/sys_enter_execve`
-* Captures:
-
-  * PID, PPID, UID
-  * Mount namespace (container identity)
-  * command name
-
-## 2) Smart Noise Filtering
-
-AEGIS avoids logging:
-
-* systemd / dockerd / containerd
-* VS Code / gopls / apt
-* AEGIS internal processes
-
-## 3) AI Advisor Verdict
-
-Threat classification detects patterns like:
-
-* `/etc/shadow` access
-* netcat reverse shell
-* wget/curl malware ingress
-* crypto miners
-* recon tools (nmap, tcpdump)
-
-## 4) Active Defense (Guardian Defender)
-
-* Suspicious processes can be terminated
-* Built-in safety:
-
-  * does not kill system PID ranges
-  * does not kill AEGIS components
-  * prevents engine suicide
-  * prevents killing engine child processes
-
-## 5) Supply Chain Gatekeeper
-
-Blocks deployment if:
-
-* image uses `latest`
-* no version tag
-* registry not whitelisted
-* keyword contains suspicious terms
-* malformed image name
-
-## 6) Self-Healing Reconciliation Loop
-
-Every ~15 seconds:
-
-* checks DB deployments
-* checks live docker state
-* if down:
-
-  * AI Advisor analyzes alerts
-  * either restart or quarantine
-
----
-
-#  Benefits / Why This Project is Powerful
-
- **Real kernel monitoring (not just logs)**
- **Detects runtime attacks inside containers**
- **Works like a lightweight SOC for Docker**
- **Auto-healing and quarantine logic**
- **CLI + Dashboard gives full observability**
- **Designed like production DevSecOps tooling**
-
----
-
-#  Use Cases
-
-* DevSecOps demonstration project
-* Mini container security platform
-* eBPF learning + runtime security research
-* AI-driven AIOps + incident correlation
-* Lightweight alternative for lab environments
-
----
-
-#  Troubleshooting
-
-## Port Already in Use
-
+**Port in use:**
 ```bash
-sudo fuser -k 8080/tcp
-sudo fuser -k 8081/tcp
+sudo fuser -k 8080/tcp && sudo fuser -k 8081/tcp
 ```
 
-## Docker API mismatch
-
+**Docker API mismatch:**
 ```bash
 export DOCKER_API_VERSION=1.44
 ```
 
-## Dashboard not updating
-
-* Ensure Engine is running on `8080`
-* Ensure Viz is running on `8081`
-* Refresh browser: `Ctrl + Shift + R`
+**Dashboard not updating:** Confirm engine on `:8080`, viz on `:8081`. Hard refresh: `Ctrl + Shift + R`
 
 ---
 
-#  Roadmap (Future Improvements)
+## ⚠️ Scope & Limitations
 
-* Add authentication for API endpoints
-* Add Prometheus metrics
-* Add container network isolation response
-* Add real LLM integration (Ollama / OpenAI)
-* Add signed image verification (cosign)
-* Multi-node cluster support
+- **Single-node only** — no multi-host support
+- **Docker-native** — not a Kubernetes controller (see [KubeRTSec](https://github.com/Debasish-87/kubertsec) for that)
+- **Rule-based detection** — deterministic heuristics, not ML models
+- **Prototype / research system** — not designed for production deployment
 
 ---
 
-# 👤 Author
+## 🧭 Roadmap
 
-**Debasish-87**
-Email: `22btics06@suiit.ac.in`
+- [ ] API authentication layer
+- [ ] Prometheus metrics endpoint
+- [ ] Container network isolation on quarantine
+- [ ] Signed image verification (cosign)
+- [ ] Multi-node cluster support
+
+---
+
+## 📌 Use Cases
+
+- Understanding how container orchestration and runtime security can be unified in a single control loop
+- eBPF learning and supply-chain enforcement prototyping
+- DevSecOps demonstration and lab environments
+
+---
+
+## 👤 Author
+
+**Debasish-87**  
+`debasishm8765@gmail.com`
